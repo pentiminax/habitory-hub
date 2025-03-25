@@ -9,13 +9,16 @@ import HabitForm from '@/components/habits/HabitForm';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import ProgressChart from '@/components/dashboard/ProgressChart';
 
-// Données temporaires pour la démo
+// Specific type for frequency
+type Frequency = 'daily' | 'weekly' | 'monthly';
+
+// Typed mockHabits
 const mockHabits = [
   {
     id: '1',
     title: 'Méditer 10 minutes',
     description: 'Méditation de pleine conscience',
-    frequency: 'daily',
+    frequency: 'daily' as Frequency,
     streak: 5,
     isCompleted: false
   },
@@ -23,7 +26,7 @@ const mockHabits = [
     id: '2',
     title: 'Faire du sport',
     description: '30 minutes minimum d\'exercice',
-    frequency: 'weekly',
+    frequency: 'weekly' as Frequency,
     streak: 2,
     isCompleted: true
   },
@@ -31,7 +34,7 @@ const mockHabits = [
     id: '3',
     title: 'Lire un livre',
     description: '20 pages par jour',
-    frequency: 'daily',
+    frequency: 'daily' as Frequency,
     streak: 0,
     isCompleted: false
   },
@@ -39,7 +42,7 @@ const mockHabits = [
     id: '4',
     title: 'Révision mensuelle des finances',
     description: 'Examiner le budget et les dépenses',
-    frequency: 'monthly',
+    frequency: 'monthly' as Frequency,
     streak: 3,
     isCompleted: false
   }

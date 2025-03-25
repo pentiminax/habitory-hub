@@ -38,14 +38,15 @@ const ProgressChart = ({ data, title, className }: ProgressChartProps) => {
 
   // Personnalisation du tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const completionRate = Math.round((payload[0].value / payload[1].payload.total) * 100);
+    if (active && payload && payload.length > 0 && payload[0] && payload[0].payload) {
+      const item = payload[0];
+      const completionRate = Math.round((item.value / item.payload.total) * 100);
       
       return (
         <div className="bg-white p-3 border border-border rounded-lg shadow-md">
           <p className="font-medium text-sm mb-1">{label}</p>
           <p className="text-sm text-blue-600">
-            {payload[0].value} sur {payload[1].payload.total} habitudes
+            {item.value} sur {item.payload.total} habitudes
           </p>
           <p className="text-sm font-medium mt-1">
             Taux de complétion: {completionRate}%
