@@ -1,140 +1,56 @@
 
 import { useState, useEffect } from 'react';
 import { Calendar, Filter, PlusCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import Navbar from '@/components/layout/Navbar';
 import HabitCard from '@/components/habits/HabitCard';
 import HabitForm from '@/components/habits/HabitForm';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// Type definition for frequency
-type Frequency = 'daily' | 'weekly' | 'monthly';
-
-// Typed mock data for the demo
-const mockHabits = [
-  {
-    id: '1',
-    title: 'Méditer 10 minutes',
-    description: 'Méditation de pleine conscience',
-    frequency: 'daily' as Frequency,
-    streak: 5,
-    isCompleted: false
-  },
-  {
-    id: '2',
-    title: 'Faire du sport',
-    description: '30 minutes minimum d\'exercice',
-    frequency: 'weekly' as Frequency,
-    streak: 2,
-    isCompleted: true
-  },
-  {
-    id: '3',
-    title: 'Lire un livre',
-    description: '20 pages par jour',
-    frequency: 'daily' as Frequency,
-    streak: 0,
-    isCompleted: false
-  },
-  {
-    id: '4',
-    title: 'Révision mensuelle des finances',
-    description: 'Examiner le budget et les dépenses',
-    frequency: 'monthly' as Frequency,
-    streak: 3,
-    isCompleted: false
-  }
-];
+import { useHabits } from '@/hooks/useHabits';
+import { Frequency } from '@/types/habit';
 
 const Habits = () => {
-  const [habits, setHabits] = useState(mockHabits);
-  const [filteredHabits, setFilteredHabits] = useState(mockHabits);
+  const {
+    filteredHabits,
+    isLoading,
+    filterFrequency,
+    setFilterFrequency,
+    filterStatus,
+    setFilterStatus,
+    completionStatus,
+    createHabit,
+    updateHabit,
+    deleteHabit,
+    toggleCompletion
+  } = useHabits();
+
   const [habitFormOpen, setHabitFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<any>(null);
-  const [filterFrequency, setFilterFrequency] = useState<'all' | Frequency>('all');
-  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     document.title = 'Mes Habitudes - Habitory';
-    
-    // Appliquer les filtres
-    let result = habits;
-    
-    if (filterFrequency !== 'all') {
-      result = result.filter(habit => habit.frequency === filterFrequency);
-    }
-    
-    if (filterStatus === 'completed') {
-      result = result.filter(habit => habit.isCompleted);
-    } else if (filterStatus === 'pending') {
-      result = result.filter(habit => !habit.isCompleted);
-    }
-    
-    setFilteredHabits(result);
-  }, [habits, filterFrequency, filterStatus]);
-
-  const toggleComplete = (id: string) => {
-    setHabits(habits.map(habit => 
-      habit.id === id 
-        ? { ...habit, isCompleted: !habit.isCompleted } 
-        : habit
-    ));
-    
-    const habit = habits.find(h => h.id === id);
-    if (habit) {
-      toast(habit.isCompleted ? "Habitude marquée comme non complétée" : "Habitude complétée !", {
-        description: habit.title,
-        action: {
-          label: "Annuler",
-          onClick: () => toggleComplete(id)
-        }
-      });
-    }
-  };
+  }, []);
 
   const handleEdit = (id: string) => {
-    const habit = habits.find(h => h.id === id);
+    const habit = filteredHabits.find(h => h.id === id);
     if (habit) {
       setEditingHabit(habit);
       setHabitFormOpen(true);
     }
   };
 
-  const handleDelete = (id: string) => {
-    const habit = habits.find(h => h.id === id);
-    if (habit) {
-      toast(`Habitude supprimée: ${habit.title}`, {
-        description: "Cette action ne peut pas être annulée",
-      });
-      setHabits(habits.filter(h => h.id !== id));
-    }
-  };
-
   const handleSubmitHabit = (values: any) => {
     if (editingHabit) {
-      setHabits(habits.map(habit => 
-        habit.id === editingHabit.id 
-          ? { ...habit, ...values } 
-          : habit
-      ));
-      toast("Habitude modifiée", {
-        description: values.title,
+      updateHabit({ 
+        id: editingHabit.id, 
+        data: values 
       });
     } else {
-      const newHabit = {
-        id: Date.now().toString(),
-        ...values,
-        streak: 0,
-        isCompleted: false
-      };
-      setHabits([...habits, newHabit]);
-      toast("Nouvelle habitude créée", {
-        description: values.title,
-      });
+      createHabit(values);
     }
     
     setEditingHabit(null);
+    setHabitFormOpen(false);
   };
 
   return (
@@ -205,15 +121,28 @@ const Habits = () => {
           </div>
         </div>
         
-        {filteredHabits.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="neo-card h-48 animate-pulse-slow">
+                <div className="p-5 h-full flex flex-col">
+                  <div className="bg-secondary h-5 w-20 rounded mb-3"></div>
+                  <div className="bg-secondary h-7 w-3/4 rounded mb-2"></div>
+                  <div className="bg-secondary h-4 w-1/2 rounded"></div>
+                  <div className="mt-auto bg-secondary h-10 w-full rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredHabits.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-muted-foreground mb-4">
-              {habits.length === 0 
+              {filteredHabits.length === 0 
                 ? "Vous n'avez pas encore créé d'habitudes" 
                 : "Aucune habitude ne correspond à vos filtres"
               }
             </p>
-            {habits.length === 0 && (
+            {filteredHabits.length === 0 && (
               <AnimatedButton
                 onClick={() => {
                   setEditingHabit(null);
@@ -235,10 +164,10 @@ const Habits = () => {
                 description={habit.description}
                 frequency={habit.frequency}
                 streak={habit.streak}
-                isCompleted={habit.isCompleted}
-                onToggleComplete={() => toggleComplete(habit.id)}
+                isCompleted={completionStatus[habit.id] || false}
+                onToggleComplete={() => toggleCompletion(habit)}
                 onEdit={() => handleEdit(habit.id)}
-                onDelete={() => handleDelete(habit.id)}
+                onDelete={() => deleteHabit(habit.id)}
               />
             ))}
           </div>

@@ -2,96 +2,50 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusCircle, Calendar, Info } from 'lucide-react';
-import { toast } from 'sonner';
 import Navbar from '@/components/layout/Navbar';
 import HabitCard from '@/components/habits/HabitCard';
 import HabitForm from '@/components/habits/HabitForm';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import ProgressChart from '@/components/dashboard/ProgressChart';
-
-// Specific type for frequency
-type Frequency = 'daily' | 'weekly' | 'monthly';
-
-// Typed mockHabits
-const mockHabits = [
-  {
-    id: '1',
-    title: 'Méditer 10 minutes',
-    description: 'Méditation de pleine conscience',
-    frequency: 'daily' as Frequency,
-    streak: 5,
-    isCompleted: false
-  },
-  {
-    id: '2',
-    title: 'Faire du sport',
-    description: '30 minutes minimum d\'exercice',
-    frequency: 'weekly' as Frequency,
-    streak: 2,
-    isCompleted: true
-  },
-  {
-    id: '3',
-    title: 'Lire un livre',
-    description: '20 pages par jour',
-    frequency: 'daily' as Frequency,
-    streak: 0,
-    isCompleted: false
-  },
-  {
-    id: '4',
-    title: 'Révision mensuelle des finances',
-    description: 'Examiner le budget et les dépenses',
-    frequency: 'monthly' as Frequency,
-    streak: 3,
-    isCompleted: false
-  }
-];
-
-const progressData = [
-  { name: 'Lun', completed: 2, total: 3 },
-  { name: 'Mar', completed: 3, total: 3 },
-  { name: 'Mer', completed: 1, total: 3 },
-  { name: 'Jeu', completed: 2, total: 3 },
-  { name: 'Ven', completed: 3, total: 3 },
-  { name: 'Sam', completed: 3, total: 3 },
-  { name: 'Dim', completed: 0, total: 3 },
-];
+import { useHabits } from '@/hooks/useHabits';
 
 const Dashboard = () => {
-  const [habits, setHabits] = useState(mockHabits);
+  const { 
+    habits, 
+    isLoading, 
+    completionStatus, 
+    createHabit,
+    updateHabit,
+    deleteHabit,
+    toggleCompletion
+  } = useHabits();
+
   const [habitFormOpen, setHabitFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [progressData, setProgressData] = useState<any[]>([]);
 
   useEffect(() => {
     document.title = 'Tableau de bord - Habitory';
-    // Simuler un chargement de données
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
     
-    return () => clearTimeout(timer);
+    // Générer des données de progression pour le graphique
+    // Dans une application réelle, ces données viendraient de Supabase
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const today = new Date().getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+    
+    const data = days.map((day, index) => {
+      const dayIndex = (index + 1) % 7; // Convertir pour que Lundi soit 1, etc.
+      const isToday = dayIndex === today;
+      const isPast = today === 0 ? dayIndex < 7 : dayIndex < today;
+      
+      return {
+        name: day,
+        completed: isToday || isPast ? Math.floor(Math.random() * 3) + 1 : 0,
+        total: 3
+      };
+    });
+    
+    setProgressData(data);
   }, []);
-
-  const toggleComplete = (id: string) => {
-    setHabits(habits.map(habit => 
-      habit.id === id 
-        ? { ...habit, isCompleted: !habit.isCompleted } 
-        : habit
-    ));
-    
-    const habit = habits.find(h => h.id === id);
-    if (habit) {
-      toast(habit.isCompleted ? "Habitude marquée comme non complétée" : "Habitude complétée !", {
-        description: habit.title,
-        action: {
-          label: "Annuler",
-          onClick: () => toggleComplete(id)
-        }
-      });
-    }
-  };
 
   const handleEdit = (id: string) => {
     const habit = habits.find(h => h.id === id);
@@ -101,40 +55,18 @@ const Dashboard = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
-    const habit = habits.find(h => h.id === id);
-    if (habit) {
-      toast(`Habitude supprimée: ${habit.title}`, {
-        description: "Cette action ne peut pas être annulée",
-      });
-      setHabits(habits.filter(h => h.id !== id));
-    }
-  };
-
   const handleSubmitHabit = (values: any) => {
     if (editingHabit) {
-      setHabits(habits.map(habit => 
-        habit.id === editingHabit.id 
-          ? { ...habit, ...values } 
-          : habit
-      ));
-      toast("Habitude modifiée", {
-        description: values.title,
+      updateHabit({ 
+        id: editingHabit.id, 
+        data: values 
       });
     } else {
-      const newHabit = {
-        id: Date.now().toString(),
-        ...values,
-        streak: 0,
-        isCompleted: false
-      };
-      setHabits([...habits, newHabit]);
-      toast("Nouvelle habitude créée", {
-        description: values.title,
-      });
+      createHabit(values);
     }
     
     setEditingHabit(null);
+    setHabitFormOpen(false);
   };
 
   return (
@@ -177,12 +109,18 @@ const Dashboard = () => {
             <div className="space-y-4 flex-grow">
               <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                 <span>Habitudes complétées</span>
-                <span className="font-medium">{habits.filter(h => h.isCompleted).length}/{habits.length}</span>
+                <span className="font-medium">
+                  {Object.values(completionStatus).filter(v => v).length}/{habits.length}
+                </span>
               </div>
               
               <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                 <span>Taux de complétion</span>
-                <span className="font-medium">{habits.length > 0 ? Math.round((habits.filter(h => h.isCompleted).length / habits.length) * 100) : 0}%</span>
+                <span className="font-medium">
+                  {habits.length > 0 
+                    ? Math.round((Object.values(completionStatus).filter(v => v).length / habits.length) * 100) 
+                    : 0}%
+                </span>
               </div>
               
               <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
@@ -238,10 +176,10 @@ const Dashboard = () => {
                     description={habit.description}
                     frequency={habit.frequency}
                     streak={habit.streak}
-                    isCompleted={habit.isCompleted}
-                    onToggleComplete={() => toggleComplete(habit.id)}
+                    isCompleted={completionStatus[habit.id] || false}
+                    onToggleComplete={() => toggleCompletion(habit)}
                     onEdit={() => handleEdit(habit.id)}
-                    onDelete={() => handleDelete(habit.id)}
+                    onDelete={() => deleteHabit(habit.id)}
                   />
                 ))}
               </div>
