@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Habit, HabitCompletion } from '@/types/habit';
+import { Habit, HabitCompletion, Frequency } from '@/types/habit';
 import { toast } from 'sonner';
 
 export const fetchHabits = async (): Promise<Habit[]> => {
@@ -16,7 +16,13 @@ export const fetchHabits = async (): Promise<Habit[]> => {
       return [];
     }
 
-    return data || [];
+    // Convertir la propriété 'frequency' en type Frequency
+    const habitsWithCorrectTypes = data.map(habit => ({
+      ...habit,
+      frequency: habit.frequency as Frequency
+    }));
+
+    return habitsWithCorrectTypes || [];
   } catch (error) {
     console.error('Exception lors de la récupération des habitudes:', error);
     toast.error('Une erreur est survenue lors de la récupération de vos habitudes');
@@ -26,6 +32,16 @@ export const fetchHabits = async (): Promise<Habit[]> => {
 
 export const createHabit = async (habit: Omit<Habit, 'id' | 'streak' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Habit | null> => {
   try {
+    // Obtenir l'utilisateur actuel
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('Erreur: aucun utilisateur connecté');
+      toast.error('Vous devez être connecté pour créer une habitude');
+      return null;
+    }
+
+    const userId = session.user.id;
+
     const { data, error } = await supabase
       .from('habits')
       .insert({
@@ -33,7 +49,8 @@ export const createHabit = async (habit: Omit<Habit, 'id' | 'streak' | 'user_id'
         description: habit.description || null,
         frequency: habit.frequency,
         streak: 0,
-        color: habit.color || 'blue'
+        color: habit.color || 'blue',
+        user_id: userId // Ajouter l'ID de l'utilisateur ici
       })
       .select()
       .single();
@@ -45,7 +62,10 @@ export const createHabit = async (habit: Omit<Habit, 'id' | 'streak' | 'user_id'
     }
 
     toast.success('Habitude créée avec succès');
-    return data;
+    return {
+      ...data,
+      frequency: data.frequency as Frequency
+    };
   } catch (error) {
     console.error('Exception lors de la création de l\'habitude:', error);
     toast.error('Une erreur est survenue lors de la création de l\'habitude');
@@ -69,7 +89,10 @@ export const updateHabit = async (id: string, habit: Partial<Habit>): Promise<Ha
     }
 
     toast.success('Habitude mise à jour avec succès');
-    return data;
+    return {
+      ...data,
+      frequency: data.frequency as Frequency
+    };
   } catch (error) {
     console.error('Exception lors de la mise à jour de l\'habitude:', error);
     toast.error('Une erreur est survenue lors de la mise à jour de l\'habitude');
@@ -116,6 +139,16 @@ export const toggleHabitCompletion = async (habit: Habit): Promise<boolean> => {
       return false;
     }
     
+    // Obtenir l'utilisateur actuel
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('Erreur: aucun utilisateur connecté');
+      toast.error('Vous devez être connecté pour modifier une habitude');
+      return false;
+    }
+
+    const userId = session.user.id;
+    
     // Si déjà complété, on supprime la complétion
     if (existingCompletions && existingCompletions.length > 0) {
       const { error: deleteError } = await supabase
@@ -146,7 +179,8 @@ export const toggleHabitCompletion = async (habit: Habit): Promise<boolean> => {
       .from('habit_completions')
       .insert({
         habit_id: habit.id,
-        completed_date: today
+        completed_date: today,
+        user_id: userId // Ajouter l'ID de l'utilisateur ici
       });
     
     if (insertError) {
