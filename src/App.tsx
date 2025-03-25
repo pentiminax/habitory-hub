@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import Habits from "./pages/Habits";
 import Statistics from "./pages/Statistics";
 import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -20,9 +22,31 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/habits" element={<Habits />} />
-          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/habits" 
+            element={
+              <ProtectedRoute>
+                <Habits />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/statistics" 
+            element={
+              <ProtectedRoute>
+                <Statistics />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

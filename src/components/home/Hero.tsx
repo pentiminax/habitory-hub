@@ -28,7 +28,7 @@ const Hero = () => {
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in opacity-0 animate-delay-300">
           <Link 
-            to="/dashboard" 
+            to="/auth" 
             className="btn-primary flex items-center gap-2 group"
           >
             Commencer maintenant
